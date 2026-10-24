@@ -1,0 +1,9 @@
+{
+	"id": "github-sync",
+	"name": "GitHub Sync",
+	"version": "0.1.0",
+	"minAppVersion": "1.5.0",
+	"description": "Automatically syncs your vault with a GitHub repository when Obsidian starts.",
+	"author": "al-writer",
+	"isDesktopOnly": false
+}

@@ -1,9 +1,17 @@
-# Obsidian: локальное состояние рабочего пространства
-.obsidian/workspace.json
-.obsidian/workspace-mobile.json
-.obsidian/cache
-.trash/
+# Dependencies
+node_modules/
 
-# Системные файлы
+# Build output
+main.js
+*.js.map
+
+# Plugin settings (contains the GitHub token)
+data.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
 .DS_Store
 Thumbs.db

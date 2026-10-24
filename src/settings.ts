@@ -10,6 +10,7 @@ export interface GitHubSyncSettings {
 	repo: string;
 	branch: string;
 	syncOnStartup: boolean;
+	syncInterval: number;
 	showNotices: boolean;
 	deletionGuard: boolean;
 }
@@ -21,6 +22,7 @@ export const DEFAULT_SETTINGS: GitHubSyncSettings = {
 	repo: "",
 	branch: "main",
 	syncOnStartup: true,
+	syncInterval: 0,
 	showNotices: true,
 	deletionGuard: true,
 };
@@ -131,6 +133,23 @@ export class GitHubSyncSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
+
+		new Setting(containerEl)
+			.setName(t("settingSyncInterval"))
+			.setDesc(t("settingSyncIntervalDesc"))
+			.addText((text) => {
+				text.inputEl.type = "number";
+				text.inputEl.min = "0";
+				text
+					.setPlaceholder("0")
+					.setValue(String(settings.syncInterval))
+					.onChange(async (value) => {
+						const minutes = Number.parseInt(value, 10);
+						settings.syncInterval = Number.isFinite(minutes) && minutes > 0 ? minutes : 0;
+						await this.plugin.saveSettings();
+						this.plugin.scheduleSync();
+					});
+			});
 
 		new Setting(containerEl)
 			.setName(t("settingNotices"))

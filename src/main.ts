@@ -32,6 +32,7 @@ export default class GitHubSyncPlugin extends Plugin {
 	private status: Status = { kind: "idle" };
 	private statusBarEl: HTMLElement;
 	private syncing = false;
+	private intervalId: number | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -54,24 +55,37 @@ export default class GitHubSyncPlugin extends Plugin {
 		// Wait until the vault is fully indexed before the startup sync.
 		this.app.workspace.onLayoutReady(() => {
 			if (this.settings.syncOnStartup) this.sync();
+			this.scheduleSync();
 		});
 	}
 
-	async sync() {
+	/** (Re)starts the periodic sync timer according to the settings. */
+	scheduleSync() {
+		if (this.intervalId !== null) window.clearInterval(this.intervalId);
+		this.intervalId = null;
+		const minutes = this.settings.syncInterval;
+		if (minutes > 0) {
+			this.intervalId = this.registerInterval(window.setInterval(() => this.sync(true), minutes * 60_000));
+		}
+	}
+
+	/** `background` is the periodic sync: it stays quiet unless there is something to report. */
+	async sync(background = false) {
 		if (this.syncing) {
-			new Notice(this.t("noticeAlreadyRunning"));
+			if (!background) new Notice(this.t("noticeAlreadyRunning"));
 			return;
 		}
 
 		const { token, owner, repo, branch, deletionGuard } = this.settings;
 		if (!token || !owner || !repo) {
-			new Notice(this.t("noticeNotConfigured"));
+			if (!background) new Notice(this.t("noticeNotConfigured"));
 			return;
 		}
 
 		this.syncing = true;
+		const previous = this.status;
 		this.setStatus({ kind: "syncing" });
-		const progress = this.settings.showNotices ? new Notice(this.t("noticeSyncing"), 0) : null;
+		const progress = this.settings.showNotices && !background ? new Notice(this.t("noticeSyncing"), 0) : null;
 
 		try {
 			const engine = new SyncEngine(
@@ -88,19 +102,22 @@ export default class GitHubSyncPlugin extends Plugin {
 			);
 			const result = await engine.sync();
 			this.setStatus({ kind: "synced", at: new Date(), conflicts: result.conflicts.length });
-			this.notifyResult(result);
+			this.notifyResult(result, background);
 		} catch (e) {
 			console.error("GitHub Sync failed", e);
 			const message = this.describeError(e);
 			this.setStatus({ kind: "error", message });
-			new Notice(this.t("noticeError", { message }), 10000);
+			// Do not repeat the same error on every periodic run.
+			if (!background || previous.kind !== "error" || previous.message !== message) {
+				new Notice(this.t("noticeError", { message }), 10000);
+			}
 		} finally {
 			progress?.hide();
 			this.syncing = false;
 		}
 	}
 
-	private notifyResult(result: SyncResult) {
+	private notifyResult(result: SyncResult, background: boolean) {
 		if (result.conflicts.length > 0) {
 			// Conflicts need attention, so they are shown even with notifications turned off.
 			new Notice(
@@ -110,7 +127,7 @@ export default class GitHubSyncPlugin extends Plugin {
 		}
 		if (!this.settings.showNotices) return;
 		if (result.downloaded + result.uploaded + result.merged === 0) {
-			new Notice(this.t("noticeUpToDate"));
+			if (!background) new Notice(this.t("noticeUpToDate"));
 		} else {
 			new Notice(
 				this.t("noticeDone", { down: result.downloaded, up: result.uploaded, merged: result.merged })

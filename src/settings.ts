@@ -11,6 +11,7 @@ export interface GitHubSyncSettings {
 	branch: string;
 	syncOnStartup: boolean;
 	syncInterval: number;
+	syncOnQuit: boolean;
 	showNotices: boolean;
 	deletionGuard: boolean;
 }
@@ -23,6 +24,7 @@ export const DEFAULT_SETTINGS: GitHubSyncSettings = {
 	branch: "main",
 	syncOnStartup: true,
 	syncInterval: 0,
+	syncOnQuit: true,
 	showNotices: true,
 	deletionGuard: true,
 };
@@ -130,6 +132,16 @@ export class GitHubSyncSettingTab extends PluginSettingTab {
 			.addToggle((toggle) =>
 				toggle.setValue(settings.syncOnStartup).onChange(async (value) => {
 					settings.syncOnStartup = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName(t("settingSyncOnQuit"))
+			.setDesc(t("settingSyncOnQuitDesc"))
+			.addToggle((toggle) =>
+				toggle.setValue(settings.syncOnQuit).onChange(async (value) => {
+					settings.syncOnQuit = value;
 					await this.plugin.saveSettings();
 				})
 			);

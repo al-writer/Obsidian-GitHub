@@ -31,7 +31,7 @@ export default class GitHubSyncPlugin extends Plugin {
 	private store: SyncStore;
 	private status: Status = { kind: "idle" };
 	private statusBarEl: HTMLElement;
-	private syncing = false;
+	private running: Promise<void> | null = null;
 	private intervalId: number | null = null;
 
 	async onload() {
@@ -57,6 +57,19 @@ export default class GitHubSyncPlugin extends Plugin {
 			if (this.settings.syncOnStartup) this.sync();
 			this.scheduleSync();
 		});
+
+		// Obsidian waits for tasks added here before quitting (desktop only, best effort).
+		this.registerEvent(
+			this.app.workspace.on("quit", (tasks) => {
+				if (this.settings.syncOnQuit) tasks.add(() => this.syncBeforeQuit());
+			})
+		);
+	}
+
+	private async syncBeforeQuit() {
+		// Let a running sync finish first, then send the latest changes.
+		await this.running;
+		await this.sync(true);
 	}
 
 	/** (Re)starts the periodic sync timer according to the settings. */
@@ -71,18 +84,27 @@ export default class GitHubSyncPlugin extends Plugin {
 
 	/** `background` is the periodic sync: it stays quiet unless there is something to report. */
 	async sync(background = false) {
-		if (this.syncing) {
+		if (this.running) {
 			if (!background) new Notice(this.t("noticeAlreadyRunning"));
 			return;
 		}
 
-		const { token, owner, repo, branch, deletionGuard } = this.settings;
+		const { token, owner, repo } = this.settings;
 		if (!token || !owner || !repo) {
 			if (!background) new Notice(this.t("noticeNotConfigured"));
 			return;
 		}
 
-		this.syncing = true;
+		this.running = this.runSync(background);
+		try {
+			await this.running;
+		} finally {
+			this.running = null;
+		}
+	}
+
+	private async runSync(background: boolean) {
+		const { token, owner, repo, branch, deletionGuard } = this.settings;
 		const previous = this.status;
 		this.setStatus({ kind: "syncing" });
 		const progress = this.settings.showNotices && !background ? new Notice(this.t("noticeSyncing"), 0) : null;
@@ -113,7 +135,6 @@ export default class GitHubSyncPlugin extends Plugin {
 			}
 		} finally {
 			progress?.hide();
-			this.syncing = false;
 		}
 	}
 

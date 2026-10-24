@@ -1,96 +1,64 @@
-# GitHub Sync для Obsidian
+# Qoima Sync
 
-Плагин синхронизирует хранилище (vault) с репозиторием на GitHub — автоматически при запуске Obsidian или вручную.
+**English** · [Русский](README.ru.md)
 
-- Работает через GitHub REST API: не нужен установленный `git`, работает на компьютере и телефоне.
-- Без сторонних зависимостей — только API Obsidian.
-- Интерфейс на казахском (по умолчанию), русском и английском.
+Sync your Obsidian vault with a GitHub repository — automatically on startup, on a schedule and on quit, or on demand. *Qoima* (қойма) means "vault" in Kazakh.
 
-## Возможности
+- Works through the GitHub REST API: no `git` installation needed, works on desktop and mobile.
+- No third-party dependencies — only the Obsidian API.
+- Interface in English, Russian and Kazakh. By default it follows the Obsidian language.
 
-- **Синхронизация при запуске** (можно отключить) и вручную: команда «Синхронизировать сейчас», кнопка на боковой панели или клик по статусной строке.
-- **Синхронизация при закрытии** Obsidian (только на компьютере — на телефоне система закрывает приложение без предупреждения).
-- **Периодическая синхронизация** каждые N минут (по умолчанию выключена). Фоновая синхронизация не показывает лишних уведомлений: только об изменениях, конфликтах и новых ошибках.
-- **Статус** в статусной строке (`GitHub: синхронизировано в 14:05`, ошибки, конфликты) и во всплывающих уведомлениях.
-- **Выбор ветки** в настройках, с подсказкой списка веток из репозитория. Если ветки нет, она создаётся из ветки по умолчанию.
-- **Защита от массового удаления**: синхронизация останавливается, если удалила бы больше половины файлов.
+## Features
 
-## Как работает синхронизация
+- **Sync on startup**, **every N minutes** and **on quit** (desktop), each can be turned off.
+- **Manual sync**: the *Sync now* command, the ribbon button, or a click on the status bar.
+- **Status** in the status bar (`GitHub: synced at 14:05`, errors, conflicts) and in notifications. Background syncs stay quiet unless something changed.
+- **Branch selection** in the settings, with suggestions loaded from the repository. A missing branch is created from the default branch.
+- **Mass deletion protection**: the sync stops if it would delete more than half of the files.
 
-Как в git — трёхстороннее сравнение: локальная версия, версия на GitHub и состояние после прошлой синхронизации (база).
+## How syncing works
 
-| Ситуация | Результат |
+Like git, every file is compared in three versions: local, on GitHub, and as of the last sync (the base).
+
+| Situation | Result |
 |---|---|
-| Файл изменён только с одной стороны | Изменение переносится на другую сторону |
-| Файл удалён с одной стороны и не менялся с другой | Удаляется и там (локально — в корзину) |
-| Удалён с одной стороны, изменён с другой | Изменение побеждает, файл восстанавливается |
-| Текстовый файл изменён с обеих сторон в разных местах | Автоматическое построчное слияние (как `git merge`) |
-| Изменены одни и те же строки или бинарный файл | Конфликт: локальная версия остаётся, версия с GitHub сохраняется рядом как `заметка (conflict 2026-10-24 19-30-12).md` |
+| Changed on one side only | The change is applied to the other side |
+| Deleted on one side, unchanged on the other | Deleted there too (locally — to the trash) |
+| Deleted on one side, changed on the other | The change wins, the file is restored |
+| Text file changed on both sides in different places | Merged line by line automatically, like `git merge` |
+| Same lines changed, or a binary file | Conflict: the local version stays, the GitHub version is saved next to it as `note (conflict 2026-10-24 19-30-12).md` |
 
-Все изменения отправляются одним коммитом. Если кто-то успел отправить изменения в ветку во время синхронизации, она повторяется с новым состоянием.
+All changes are pushed as a single commit. If someone pushes to the branch during a sync, the sync starts over with the new state.
 
-Не синхронизируются скрытые файлы и папки (начинающиеся с `.`), в том числе `.obsidian`.
+Hidden files and folders (starting with `.`), including `.obsidian`, are not synced.
 
-## Установка
+## Network use and accounts
 
-Плагина нет в каталоге сообществ Obsidian, поэтому он ставится одним из двух способов. В обоих случаях сначала включите сторонние плагины: **Настройки → Сторонние плагины → Включить сторонние плагины** (отключить ограниченный режим).
+- A **GitHub account** and a personal access token are required.
+- The plugin only talks to the **GitHub REST API** (`api.github.com`) to read and write files in the repository you configure. There are no other network requests and no telemetry.
+- The token is stored locally in the plugin settings and is only sent to GitHub.
 
-### Способ 1. Через BRAT (рекомендуется, ПК и телефон)
+## Installation
 
-[BRAT](https://github.com/TfTHacker/obsidian42-brat) ставит плагины прямо из GitHub и сам их обновляет. Удобнее всего на телефоне — не нужно лазить по скрытым папкам.
+Install **Qoima Sync** from **Settings → Community plugins → Browse**, then enable it.
 
-1. **Настройки → Сторонние плагины → Обзор**, найдите **BRAT**, установите и включите.
-2. Откройте палитру команд (`Ctrl/Cmd + P`, на телефоне — свайп вниз или кнопка палитры) и выполните **BRAT: Add a beta plugin for testing**.
-3. Введите `al-writer/Obsidian-GitHub`, выберите последнюю версию и нажмите **Add plugin**.
-4. Включите **GitHub Sync** в списке сторонних плагинов.
+Before it is available in the directory, you can install it with [BRAT](https://github.com/TfTHacker/obsidian42-brat): run **BRAT: Add a beta plugin for testing** and enter `al-writer/Obsidian-GitHub`. Or download `main.js` and `manifest.json` from the [latest release](https://github.com/al-writer/Obsidian-GitHub/releases/latest) into `<vault>/.obsidian/plugins/qoima-sync/`.
 
-### Способ 2. Вручную
+## Setup
 
-Скачайте `main.js` и `manifest.json` со страницы [последнего релиза](https://github.com/al-writer/Obsidian-GitHub/releases/latest) и положите их в папку
+1. Create a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with access to your vault repository and the **Contents: Read and write** permission.
+2. In the plugin settings, enter the token, the repository owner and name, and the branch.
 
-```
-<хранилище>/.obsidian/plugins/github-sync/
-```
-
-Папку `github-sync` создайте сами. Папка `.obsidian` скрытая — включите показ скрытых файлов.
-
-**Windows / macOS / Linux.** Путь к хранилищу виден в Obsidian: **Настройки → Файлы и ссылки**, или щёлкните правой кнопкой по папке в проводнике Obsidian → **Показать в системном проводнике**. Скрытые файлы: в Windows — «Вид → Показать → Скрытые элементы», в macOS — `Cmd + Shift + .` в Finder.
-
-**Android.** Откройте файловый менеджер с поддержкой скрытых файлов (например, «Файлы» от Google: меню → Настройки → «Показывать скрытые файлы»), найдите папку хранилища (обычно `Documents/<хранилище>` во внутренней памяти) и скопируйте файлы в `.obsidian/plugins/github-sync/`.
-
-**iPhone / iPad.** Откройте приложение «Файлы» → «На iPhone» → **Obsidian** → `<хранилище>` (или iCloud Drive → Obsidian, если хранилище в iCloud). Скрытые папки «Файлы» не показывает, поэтому на iOS проще использовать BRAT. Вариант без BRAT: скопируйте папку плагина на ПК в хранилище, лежащее в iCloud, и дождитесь синхронизации iCloud.
-
-После копирования перезапустите Obsidian (или нажмите «Обновить» в списке сторонних плагинов) и включите **GitHub Sync**.
-
-### Обновление
-
-BRAT проверяет обновления сам (или командой **BRAT: Check for updates to all beta plugins**). При ручной установке замените `main.js` и `manifest.json` на файлы из нового релиза — настройки сохранятся.
-
-## Настройка
-
-1. Создайте [fine-grained токен](https://github.com/settings/personal-access-tokens/new) с доступом к репозиторию и правом **Contents: Read and write**.
-2. В настройках плагина укажите токен, владельца, название репозитория и ветку.
-
-Токен хранится в `.obsidian/plugins/github-sync/data.json` и не синхронизируется.
-
-## Разработка
+## Development
 
 ```bash
 npm install
-npm run dev     # сборка в режиме watch
-npm run build   # проверка типов и production-сборка
+npm run dev     # watch build
+npm run build   # type check and production build
 ```
 
-Для тестирования скопируйте `main.js` и `manifest.json` в `<vault>/.obsidian/plugins/github-sync/` и включите плагин в настройках Obsidian.
+To release, bump the version (`npm version patch`), commit and push to `main`. GitHub Actions builds the plugin and publishes a release when `manifest.json` has a new version.
 
-## Релиз
+## License
 
-```bash
-npm version patch          # или minor / major: обновит package.json, manifest.json и versions.json
-git commit -am "Release $(node -p "require('./manifest.json').version")"
-git push
-```
-
-Когда в `main` попадает `manifest.json` с новой версией, GitHub Actions соберёт плагин, создаст тег (без префикса `v`, как требует Obsidian) и опубликует релиз с `main.js` и `manifest.json`. Если релиз этой версии уже есть, ничего не произойдёт. Запустить вручную можно на вкладке Actions → Release → Run workflow.
-
-Каждый push в `main` и каждый pull request проверяются сборкой.
+[MIT](LICENSE)

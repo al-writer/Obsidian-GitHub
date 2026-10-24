@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-github-sync",
-	"version": "0.1.0",
-	"description": "Obsidian plugin that syncs the vault with GitHub on startup",
+	"name": "qoima-sync",
+	"version": "0.2.0",
+	"description": "Obsidian plugin that syncs the vault with a GitHub repository",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

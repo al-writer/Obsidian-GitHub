@@ -1,4 +1,7 @@
+import { getLanguage } from "obsidian";
+
 export type Language = "kk" | "ru" | "en";
+export type LanguageSetting = Language | "auto";
 
 export const LANGUAGE_NAMES: Record<Language, string> = {
 	kk: "Қазақша",
@@ -17,14 +20,14 @@ const en = {
 	statusError: "GitHub: sync error",
 	statusTooltip: "Click to sync",
 
-	noticeSyncing: "GitHub Sync: syncing…",
-	noticeDone: "GitHub Sync: done. Received: {down}, sent: {up}, merged: {merged}",
-	noticeUpToDate: "GitHub Sync: everything is up to date",
+	noticeSyncing: "Qoima Sync: syncing…",
+	noticeDone: "Qoima Sync: done. Received: {down}, sent: {up}, merged: {merged}",
+	noticeUpToDate: "Qoima Sync: everything is up to date",
 	noticeConflicts:
-		"GitHub Sync: conflicts in {n} file(s). The remote versions were saved as conflict copies next to them:\n{files}",
-	noticeAlreadyRunning: "GitHub Sync: sync is already running",
-	noticeNotConfigured: "GitHub Sync: set the token and repository in the plugin settings",
-	noticeError: "GitHub Sync error: {message}",
+		"Qoima Sync: conflicts in {n} file(s). The remote versions were saved as conflict copies next to them:\n{files}",
+	noticeAlreadyRunning: "Qoima Sync: sync is already running",
+	noticeNotConfigured: "Qoima Sync: set the token and repository in the plugin settings",
+	noticeError: "Qoima Sync error: {message}",
 	noticeBranchesLoaded: "Branches loaded: {n}",
 
 	errAuth: "the token is invalid or expired",
@@ -37,6 +40,7 @@ const en = {
 		"sync stopped: {n} file(s) would be deleted. If this is intended, turn off deletion protection in the settings",
 
 	settingLanguage: "Language",
+	settingLanguageAuto: "Same as Obsidian",
 	settingLanguageDesc: "Plugin interface language. Command names are updated after restarting Obsidian.",
 	settingToken: "GitHub token",
 	settingTokenDesc: "Personal access token with read and write access to repository contents (Contents: Read and write).",
@@ -71,14 +75,14 @@ const ru: Strings = {
 	statusError: "GitHub: ошибка синхронизации",
 	statusTooltip: "Нажмите, чтобы синхронизировать",
 
-	noticeSyncing: "GitHub Sync: синхронизация…",
-	noticeDone: "GitHub Sync: готово. Получено: {down}, отправлено: {up}, объединено: {merged}",
-	noticeUpToDate: "GitHub Sync: всё актуально",
+	noticeSyncing: "Qoima Sync: синхронизация…",
+	noticeDone: "Qoima Sync: готово. Получено: {down}, отправлено: {up}, объединено: {merged}",
+	noticeUpToDate: "Qoima Sync: всё актуально",
 	noticeConflicts:
-		"GitHub Sync: конфликты в файлах ({n}). Версии из GitHub сохранены рядом как копии конфликта:\n{files}",
-	noticeAlreadyRunning: "GitHub Sync: синхронизация уже выполняется",
-	noticeNotConfigured: "GitHub Sync: укажите токен и репозиторий в настройках плагина",
-	noticeError: "Ошибка GitHub Sync: {message}",
+		"Qoima Sync: конфликты в файлах ({n}). Версии из GitHub сохранены рядом как копии конфликта:\n{files}",
+	noticeAlreadyRunning: "Qoima Sync: синхронизация уже выполняется",
+	noticeNotConfigured: "Qoima Sync: укажите токен и репозиторий в настройках плагина",
+	noticeError: "Ошибка Qoima Sync: {message}",
 	noticeBranchesLoaded: "Загружено веток: {n}",
 
 	errAuth: "токен недействителен или истёк",
@@ -91,6 +95,7 @@ const ru: Strings = {
 		"синхронизация остановлена: было бы удалено файлов: {n}. Если это намеренно, отключите защиту от удаления в настройках",
 
 	settingLanguage: "Язык",
+	settingLanguageAuto: "Как в Obsidian",
 	settingLanguageDesc: "Язык интерфейса плагина. Названия команд обновятся после перезапуска Obsidian.",
 	settingToken: "Токен GitHub",
 	settingTokenDesc: "Персональный токен доступа с правом чтения и записи содержимого репозитория (Contents: Read and write).",
@@ -123,14 +128,14 @@ const kk: Strings = {
 	statusError: "GitHub: синхрондау қатесі",
 	statusTooltip: "Синхрондау үшін басыңыз",
 
-	noticeSyncing: "GitHub Sync: синхрондалуда…",
-	noticeDone: "GitHub Sync: дайын. Алынды: {down}, жіберілді: {up}, біріктірілді: {merged}",
-	noticeUpToDate: "GitHub Sync: бәрі өзекті",
+	noticeSyncing: "Qoima Sync: синхрондалуда…",
+	noticeDone: "Qoima Sync: дайын. Алынды: {down}, жіберілді: {up}, біріктірілді: {merged}",
+	noticeUpToDate: "Qoima Sync: бәрі өзекті",
 	noticeConflicts:
-		"GitHub Sync: файлдарда қайшылықтар бар ({n}). GitHub-тағы нұсқалар қасына қайшылық көшірмесі ретінде сақталды:\n{files}",
-	noticeAlreadyRunning: "GitHub Sync: синхрондау қазір жүріп жатыр",
-	noticeNotConfigured: "GitHub Sync: плагин баптауларында токен мен репозиторийді көрсетіңіз",
-	noticeError: "GitHub Sync қатесі: {message}",
+		"Qoima Sync: файлдарда қайшылықтар бар ({n}). GitHub-тағы нұсқалар қасына қайшылық көшірмесі ретінде сақталды:\n{files}",
+	noticeAlreadyRunning: "Qoima Sync: синхрондау қазір жүріп жатыр",
+	noticeNotConfigured: "Qoima Sync: плагин баптауларында токен мен репозиторийді көрсетіңіз",
+	noticeError: "Qoima Sync қатесі: {message}",
 	noticeBranchesLoaded: "Жүктелген тармақтар: {n}",
 
 	errAuth: "токен жарамсыз немесе мерзімі өткен",
@@ -143,6 +148,7 @@ const kk: Strings = {
 		"синхрондау тоқтатылды: жойылатын файлдар саны: {n}. Егер бұл әдейі болса, баптауларда жоюдан қорғауды өшіріңіз",
 
 	settingLanguage: "Тіл",
+	settingLanguageAuto: "Obsidian тіліндей",
 	settingLanguageDesc: "Плагин интерфейсінің тілі. Команда атаулары Obsidian қайта іске қосылғаннан кейін жаңарады.",
 	settingToken: "GitHub токені",
 	settingTokenDesc: "Репозиторий мазмұнын оқу және жазу құқығы бар жеке қол жеткізу токені (Contents: Read and write).",
@@ -171,6 +177,15 @@ export const LOCALES: Record<Language, string> = {
 	ru: "ru-RU",
 	en: "en-US",
 };
+
+/** Resolves "auto" to the Obsidian interface language, falling back to English. */
+export function resolveLanguage(setting: LanguageSetting): Language {
+	if (setting !== "auto") return setting;
+	const app = getLanguage().toLowerCase();
+	if (app.startsWith("kk")) return "kk";
+	if (app.startsWith("ru")) return "ru";
+	return "en";
+}
 
 export type Translate = (key: keyof Strings, vars?: Record<string, string | number>) => string;
 

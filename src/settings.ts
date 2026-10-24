@@ -1,10 +1,10 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import { GitHubClient } from "./github";
-import { Language, LANGUAGE_NAMES } from "./i18n";
-import type GitHubSyncPlugin from "./main";
+import { LANGUAGE_NAMES, LanguageSetting } from "./i18n";
+import type QoimaSyncPlugin from "./main";
 
-export interface GitHubSyncSettings {
-	language: Language;
+export interface QoimaSyncSettings {
+	language: LanguageSetting;
 	token: string;
 	owner: string;
 	repo: string;
@@ -16,8 +16,8 @@ export interface GitHubSyncSettings {
 	deletionGuard: boolean;
 }
 
-export const DEFAULT_SETTINGS: GitHubSyncSettings = {
-	language: "kk",
+export const DEFAULT_SETTINGS: QoimaSyncSettings = {
+	language: "auto",
 	token: "",
 	owner: "",
 	repo: "",
@@ -29,8 +29,8 @@ export const DEFAULT_SETTINGS: GitHubSyncSettings = {
 	deletionGuard: true,
 };
 
-export class GitHubSyncSettingTab extends PluginSettingTab {
-	constructor(app: App, private plugin: GitHubSyncPlugin) {
+export class QoimaSyncSettingTab extends PluginSettingTab {
+	constructor(app: App, private plugin: QoimaSyncPlugin) {
 		super(app, plugin);
 	}
 
@@ -45,10 +45,11 @@ export class GitHubSyncSettingTab extends PluginSettingTab {
 			.setDesc(t("settingLanguageDesc"))
 			.addDropdown((dropdown) =>
 				dropdown
+					.addOption("auto", t("settingLanguageAuto"))
 					.addOptions(LANGUAGE_NAMES)
 					.setValue(settings.language)
 					.onChange(async (value) => {
-						settings.language = value as Language;
+						settings.language = value as LanguageSetting;
 						await this.plugin.saveSettings();
 						this.display();
 					})
@@ -91,7 +92,7 @@ export class GitHubSyncSettingTab extends PluginSettingTab {
 				})
 		);
 
-		const branchList = containerEl.createEl("datalist", { attr: { id: "github-sync-branches" } });
+		const branchList = containerEl.createEl("datalist", { attr: { id: "qoima-sync-branches" } });
 		new Setting(containerEl)
 			.setName(t("settingBranch"))
 			.setDesc(t("settingBranchDesc"))

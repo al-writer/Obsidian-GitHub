@@ -1,7 +1,7 @@
 import { Notice, Plugin } from "obsidian";
 import { GitHubClient, GitHubError } from "./github";
-import { LOCALES, Translate, translator } from "./i18n";
-import { DEFAULT_SETTINGS, GitHubSyncSettings, GitHubSyncSettingTab } from "./settings";
+import { LOCALES, resolveLanguage, Translate, translator } from "./i18n";
+import { DEFAULT_SETTINGS, QoimaSyncSettings, QoimaSyncSettingTab } from "./settings";
 import {
 	HashCache,
 	MassDeletionError,
@@ -13,7 +13,7 @@ import {
 } from "./sync";
 
 interface PluginData {
-	settings?: Partial<GitHubSyncSettings>;
+	settings?: Partial<QoimaSyncSettings>;
 	state?: SyncState | null;
 	cache?: HashCache;
 }
@@ -24,8 +24,8 @@ type Status =
 	| { kind: "synced"; at: Date; conflicts: number }
 	| { kind: "error"; message: string };
 
-export default class GitHubSyncPlugin extends Plugin {
-	settings: GitHubSyncSettings;
+export default class QoimaSyncPlugin extends Plugin {
+	settings: QoimaSyncSettings;
 	t: Translate;
 
 	private store: SyncStore;
@@ -37,7 +37,7 @@ export default class GitHubSyncPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		this.addSettingTab(new GitHubSyncSettingTab(this.app, this));
+		this.addSettingTab(new QoimaSyncSettingTab(this.app, this));
 
 		this.addCommand({
 			id: "sync-now",
@@ -126,7 +126,7 @@ export default class GitHubSyncPlugin extends Plugin {
 			this.setStatus({ kind: "synced", at: new Date(), conflicts: result.conflicts.length });
 			this.notifyResult(result, background);
 		} catch (e) {
-			console.error("GitHub Sync failed", e);
+			console.error("Qoima Sync failed", e);
 			const message = this.describeError(e);
 			this.setStatus({ kind: "error", message });
 			// Do not repeat the same error on every periodic run.
@@ -190,7 +190,7 @@ export default class GitHubSyncPlugin extends Plugin {
 				text = this.t("statusSyncing");
 				break;
 			case "synced": {
-				const time = status.at.toLocaleTimeString(LOCALES[this.settings.language], {
+				const time = status.at.toLocaleTimeString(LOCALES[resolveLanguage(this.settings.language)], {
 					hour: "2-digit",
 					minute: "2-digit",
 				});
@@ -214,11 +214,11 @@ export default class GitHubSyncPlugin extends Plugin {
 		const data: PluginData = (await this.loadData()) ?? {};
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings);
 		this.store = { state: data.state ?? null, cache: data.cache ?? {}, save: () => this.saveAll() };
-		this.t = translator(this.settings.language);
+		this.t = translator(resolveLanguage(this.settings.language));
 	}
 
 	async saveSettings() {
-		this.t = translator(this.settings.language);
+		this.t = translator(resolveLanguage(this.settings.language));
 		if (this.statusBarEl) this.renderStatus();
 		await this.saveAll();
 	}

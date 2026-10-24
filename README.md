@@ -89,10 +89,11 @@ npm run build   # проверка типов и production-сборка
 ## Релиз
 
 ```bash
-npm version patch          # или minor / major: обновит версию, manifest.json, versions.json и создаст тег
-git push --follow-tags
+npm version patch          # или minor / major: обновит package.json, manifest.json и versions.json
+git commit -am "Release $(node -p "require('./manifest.json').version")"
+git push
 ```
 
-После push тега GitHub Actions соберёт плагин и опубликует релиз с `main.js` и `manifest.json`. Тег должен совпадать с версией в `manifest.json` (без префикса `v`), иначе сборка остановится.
+Когда в `main` попадает `manifest.json` с новой версией, GitHub Actions соберёт плагин, создаст тег (без префикса `v`, как требует Obsidian) и опубликует релиз с `main.js` и `manifest.json`. Если релиз этой версии уже есть, ничего не произойдёт. Запустить вручную можно на вкладке Actions → Release → Run workflow.
 
 Каждый push в `main` и каждый pull request проверяются сборкой.

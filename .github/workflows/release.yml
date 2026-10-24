@@ -1,43 +1,55 @@
 name: Release
 
-# Push a tag equal to the version in manifest.json (e.g. 0.2.0, without "v")
-# to build the plugin and publish a GitHub release with main.js and manifest.json.
+# When manifest.json on main has a version without a release yet, build the plugin
+# and publish a release with main.js and manifest.json. The tag (e.g. 0.2.0,
+# without "v", as Obsidian expects) is created by the release itself.
 on:
   push:
-    tags:
-      - "*"
+    branches: [main]
+    paths: [manifest.json, .github/workflows/release.yml]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: release
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Read version
+        id: version
+        run: |
+          version=$(node -p "require('./manifest.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if gh release view "$version" > /dev/null 2>&1; then
+            echo "Release $version already exists"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-node@v4
+        if: steps.version.outputs.exists != 'true'
         with:
           node-version: 22
           cache: npm
 
-      - name: Check that the tag matches manifest.json
-        run: |
-          version=$(node -p "require('./manifest.json').version")
-          if [ "$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match manifest.json version $version"
-            exit 1
-          fi
+      - if: steps.version.outputs.exists != 'true'
+        run: npm ci
 
-      - run: npm ci
-
-      - run: npm run build
+      - if: steps.version.outputs.exists != 'true'
+        run: npm run build
 
       - name: Create release
-        env:
-          GH_TOKEN: ${{ github.token }}
+        if: steps.version.outputs.exists != 'true'
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "$GITHUB_REF_NAME" \
+          gh release create "${{ steps.version.outputs.version }}" \
+            --target "$GITHUB_SHA" \
+            --title "${{ steps.version.outputs.version }}" \
             --generate-notes \
             main.js manifest.json

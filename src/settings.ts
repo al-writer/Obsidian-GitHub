@@ -1,90 +1,153 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting } from "obsidian";
+import { GitHubClient } from "./github";
+import { Language, LANGUAGE_NAMES } from "./i18n";
 import type GitHubSyncPlugin from "./main";
 
 export interface GitHubSyncSettings {
+	language: Language;
 	token: string;
 	owner: string;
 	repo: string;
 	branch: string;
 	syncOnStartup: boolean;
+	showNotices: boolean;
+	deletionGuard: boolean;
 }
 
 export const DEFAULT_SETTINGS: GitHubSyncSettings = {
+	language: "kk",
 	token: "",
 	owner: "",
 	repo: "",
 	branch: "main",
 	syncOnStartup: true,
+	showNotices: true,
+	deletionGuard: true,
 };
 
 export class GitHubSyncSettingTab extends PluginSettingTab {
-	plugin: GitHubSyncPlugin;
-
-	constructor(app: App, plugin: GitHubSyncPlugin) {
+	constructor(app: App, private plugin: GitHubSyncPlugin) {
 		super(app, plugin);
-		this.plugin = plugin;
 	}
 
 	display(): void {
 		const { containerEl } = this;
+		const { settings } = this.plugin;
+		const t = this.plugin.t;
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("GitHub token")
-			.setDesc("Personal access token with read/write access to repository contents.")
+			.setName(t("settingLanguage"))
+			.setDesc(t("settingLanguageDesc"))
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOptions(LANGUAGE_NAMES)
+					.setValue(settings.language)
+					.onChange(async (value) => {
+						settings.language = value as Language;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName(t("settingToken"))
+			.setDesc(t("settingTokenDesc"))
 			.addText((text) => {
 				text.inputEl.type = "password";
 				text
 					.setPlaceholder("github_pat_...")
-					.setValue(this.plugin.settings.token)
+					.setValue(settings.token)
 					.onChange(async (value) => {
-						this.plugin.settings.token = value.trim();
+						settings.token = value.trim();
 						await this.plugin.saveSettings();
 					});
 			});
 
 		new Setting(containerEl)
-			.setName("Repository owner")
+			.setName(t("settingOwner"))
+			.setDesc(t("settingOwnerDesc"))
 			.addText((text) =>
 				text
 					.setPlaceholder("username")
-					.setValue(this.plugin.settings.owner)
+					.setValue(settings.owner)
 					.onChange(async (value) => {
-						this.plugin.settings.owner = value.trim();
+						settings.owner = value.trim();
 						await this.plugin.saveSettings();
 					})
 			);
 
-		new Setting(containerEl)
-			.setName("Repository name")
-			.addText((text) =>
-				text
-					.setPlaceholder("my-vault")
-					.setValue(this.plugin.settings.repo)
-					.onChange(async (value) => {
-						this.plugin.settings.repo = value.trim();
-						await this.plugin.saveSettings();
-					})
-			);
+		new Setting(containerEl).setName(t("settingRepo")).addText((text) =>
+			text
+				.setPlaceholder("my-vault")
+				.setValue(settings.repo)
+				.onChange(async (value) => {
+					settings.repo = value.trim();
+					await this.plugin.saveSettings();
+				})
+		);
 
+		const branchList = containerEl.createEl("datalist", { attr: { id: "github-sync-branches" } });
 		new Setting(containerEl)
-			.setName("Branch")
-			.addText((text) =>
+			.setName(t("settingBranch"))
+			.setDesc(t("settingBranchDesc"))
+			.addText((text) => {
+				text.inputEl.setAttribute("list", branchList.id);
 				text
 					.setPlaceholder("main")
-					.setValue(this.plugin.settings.branch)
+					.setValue(settings.branch)
 					.onChange(async (value) => {
-						this.plugin.settings.branch = value.trim() || "main";
+						settings.branch = value.trim() || DEFAULT_SETTINGS.branch;
 						await this.plugin.saveSettings();
+					});
+			})
+			.addExtraButton((button) =>
+				button
+					.setIcon("refresh-cw")
+					.setTooltip(t("settingLoadBranches"))
+					.onClick(async () => {
+						if (!settings.token || !settings.owner || !settings.repo) {
+							new Notice(t("noticeNotConfigured"));
+							return;
+						}
+						try {
+							const client = new GitHubClient(settings.token, settings.owner, settings.repo);
+							const branches = await client.listBranches();
+							branchList.empty();
+							for (const name of branches) branchList.createEl("option", { value: name });
+							new Notice(t("noticeBranchesLoaded", { n: branches.length }));
+						} catch (e) {
+							new Notice(t("noticeError", { message: this.plugin.describeError(e) }));
+						}
 					})
 			);
 
 		new Setting(containerEl)
-			.setName("Sync on startup")
-			.setDesc("Run a sync automatically when Obsidian starts.")
+			.setName(t("settingSyncOnStartup"))
+			.setDesc(t("settingSyncOnStartupDesc"))
 			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.syncOnStartup).onChange(async (value) => {
-					this.plugin.settings.syncOnStartup = value;
+				toggle.setValue(settings.syncOnStartup).onChange(async (value) => {
+					settings.syncOnStartup = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName(t("settingNotices"))
+			.setDesc(t("settingNoticesDesc"))
+			.addToggle((toggle) =>
+				toggle.setValue(settings.showNotices).onChange(async (value) => {
+					settings.showNotices = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName(t("settingDeletionGuard"))
+			.setDesc(t("settingDeletionGuardDesc"))
+			.addToggle((toggle) =>
+				toggle.setValue(settings.deletionGuard).onChange(async (value) => {
+					settings.deletionGuard = value;
 					await this.plugin.saveSettings();
 				})
 			);

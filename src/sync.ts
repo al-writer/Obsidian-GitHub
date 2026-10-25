@@ -26,6 +26,8 @@ export interface SyncOptions {
 	branch: string;
 	deletionGuard: boolean;
 	commitMessage: string;
+	/** Called as file actions complete, starting with (0, total). */
+	onProgress?: (done: number, total: number) => void;
 }
 
 export interface SyncResult {
@@ -157,6 +159,8 @@ export class SyncEngine {
 		const base = this.store.state?.key === this.key ? this.store.state.files : {};
 		const actions = this.plan(local, remote, base);
 		this.checkDeletions(actions, base);
+		let done = 0;
+		this.options.onProgress?.(done, actions.length);
 
 		const finalRemote = new Map(remote);
 		const treeEntries: NewTreeEntry[] = [];
@@ -231,6 +235,7 @@ export class SyncEngine {
 					break;
 				}
 			}
+			this.options.onProgress?.(++done, actions.length);
 		});
 
 		let newHead = head;

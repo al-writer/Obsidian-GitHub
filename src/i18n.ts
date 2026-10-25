@@ -15,12 +15,14 @@ const en = {
 
 	statusIdle: "GitHub: not synced yet",
 	statusSyncing: "GitHub: syncing…",
+	statusWaiting: "GitHub: waiting for the API limit…",
 	statusSynced: "GitHub: synced at {time}",
 	statusConflicts: "GitHub: conflicts ({n})",
 	statusError: "GitHub: sync error",
 	statusTooltip: "Click to sync",
 
 	noticeSyncing: "Qoima Sync: syncing…",
+	noticeWaiting: "Qoima Sync: GitHub API limit reached, continuing in {s} s…",
 	noticeDone: "Qoima Sync: done. Received: {down}, sent: {up}, merged: {merged}",
 	noticeUpToDate: "Qoima Sync: everything is up to date",
 	noticeConflicts:
@@ -70,12 +72,14 @@ const ru: Strings = {
 
 	statusIdle: "GitHub: ещё не синхронизировано",
 	statusSyncing: "GitHub: синхронизация…",
+	statusWaiting: "GitHub: ожидание лимита API…",
 	statusSynced: "GitHub: синхронизировано в {time}",
 	statusConflicts: "GitHub: конфликты ({n})",
 	statusError: "GitHub: ошибка синхронизации",
 	statusTooltip: "Нажмите, чтобы синхронизировать",
 
 	noticeSyncing: "Qoima Sync: синхронизация…",
+	noticeWaiting: "Qoima Sync: достигнут лимит GitHub API, продолжу через {s} с…",
 	noticeDone: "Qoima Sync: готово. Получено: {down}, отправлено: {up}, объединено: {merged}",
 	noticeUpToDate: "Qoima Sync: всё актуально",
 	noticeConflicts:
@@ -123,12 +127,14 @@ const kk: Strings = {
 
 	statusIdle: "GitHub: әлі синхрондалмаған",
 	statusSyncing: "GitHub: синхрондалуда…",
+	statusWaiting: "GitHub: API шегін күтуде…",
 	statusSynced: "GitHub: {time} синхрондалды",
 	statusConflicts: "GitHub: қайшылықтар ({n})",
 	statusError: "GitHub: синхрондау қатесі",
 	statusTooltip: "Синхрондау үшін басыңыз",
 
 	noticeSyncing: "Qoima Sync: синхрондалуда…",
+	noticeWaiting: "Qoima Sync: GitHub API шегіне жетті, {s} с кейін жалғастырамын…",
 	noticeDone: "Qoima Sync: дайын. Алынды: {down}, жіберілді: {up}, біріктірілді: {merged}",
 	noticeUpToDate: "Qoima Sync: бәрі өзекті",
 	noticeConflicts:

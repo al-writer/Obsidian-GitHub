@@ -42,7 +42,7 @@ Hidden files and folders (starting with `.`), including `.obsidian`, are not syn
 
 Install **Qoima Sync** from **Settings → Community plugins → Browse**, then enable it.
 
-Before it is available in the directory, you can install it with [BRAT](https://github.com/TfTHacker/obsidian42-brat): run **BRAT: Add a beta plugin for testing** and enter `al-writer/Obsidian-GitHub`. Or download `main.js` and `manifest.json` from the [latest release](https://github.com/al-writer/Obsidian-GitHub/releases/latest) into `<vault>/.obsidian/plugins/qoima-sync/`.
+Before it is available in the directory, you can install it with [BRAT](https://github.com/TfTHacker/obsidian42-brat): run **BRAT: Add a beta plugin for testing** and enter `al-writer/Obsidian-GitHub`. Or download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/al-writer/Obsidian-GitHub/releases/latest) into `<vault>/.obsidian/plugins/qoima-sync/`.
 
 ## Setup
 

@@ -1,7 +1,7 @@
 name: Release
 
 # When manifest.json on main has a version without a release yet, build the plugin
-# and publish a release with main.js and manifest.json. The tag (e.g. 0.2.0,
+# and publish a release with main.js, manifest.json and styles.css. The tag (e.g. 0.2.0,
 # without "v", as Obsidian expects) is created by the release itself.
 on:
   push:
@@ -52,4 +52,4 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "${{ steps.version.outputs.version }}" \
             --generate-notes \
-            main.js manifest.json
+            main.js manifest.json styles.css

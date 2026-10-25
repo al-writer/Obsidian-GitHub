@@ -54,7 +54,13 @@ export class GitHubClient {
 	private writeQueue: Promise<unknown> = Promise.resolve();
 	private lastWrite = 0;
 
-	constructor(private token: string, owner: string, repo: string) {
+	/** `onRateLimit` is told how long a rate limit pause lasts, and gets null when it is over. */
+	constructor(
+		private token: string,
+		owner: string,
+		repo: string,
+		private onRateLimit?: (wait: number | null) => void
+	) {
 		this.base = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
 	}
 
@@ -90,7 +96,9 @@ export class GitHubClient {
 			const wait = rateLimitWait(res, message, attempt);
 			if (wait !== null && wait <= MAX_WAIT && attempt < MAX_RETRIES) {
 				console.warn(`Qoima Sync: GitHub rate limit, retrying in ${Math.round(wait / 1000)} s`);
+				this.onRateLimit?.(wait);
 				await sleep(wait);
+				this.onRateLimit?.(null);
 				continue;
 			}
 			throw new GitHubError(res.status, message, wait !== null);

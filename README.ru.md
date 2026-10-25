@@ -50,7 +50,7 @@
 
 ### Способ 2. Вручную
 
-Скачайте `main.js` и `manifest.json` со страницы [последнего релиза](https://github.com/al-writer/Obsidian-GitHub/releases/latest) и положите их в папку
+Скачайте `main.js`, `manifest.json` и `styles.css` со страницы [последнего релиза](https://github.com/al-writer/Obsidian-GitHub/releases/latest) и положите их в папку
 
 ```
 <хранилище>/.obsidian/plugins/qoima-sync/
@@ -68,7 +68,7 @@
 
 ### Обновление
 
-BRAT проверяет обновления сам (или командой **BRAT: Check for updates to all beta plugins**). При ручной установке замените `main.js` и `manifest.json` на файлы из нового релиза — настройки сохранятся.
+BRAT проверяет обновления сам (или командой **BRAT: Check for updates to all beta plugins**). При ручной установке замените `main.js`, `manifest.json` и `styles.css` на файлы из нового релиза — настройки сохранятся.
 
 ## Сеть и аккаунты
 
@@ -91,7 +91,7 @@ npm run dev     # сборка в режиме watch
 npm run build   # проверка типов и production-сборка
 ```
 
-Для тестирования скопируйте `main.js` и `manifest.json` в `<vault>/.obsidian/plugins/qoima-sync/` и включите плагин в настройках Obsidian.
+Для тестирования скопируйте `main.js`, `manifest.json` и `styles.css` в `<vault>/.obsidian/plugins/qoima-sync/` и включите плагин в настройках Obsidian.
 
 ## Релиз
 
@@ -101,6 +101,6 @@ git commit -am "Release $(node -p "require('./manifest.json').version")"
 git push
 ```
 
-Когда в `main` попадает `manifest.json` с новой версией, GitHub Actions соберёт плагин, создаст тег (без префикса `v`, как требует Obsidian) и опубликует релиз с `main.js` и `manifest.json`. Если релиз этой версии уже есть, ничего не произойдёт. Запустить вручную можно на вкладке Actions → Release → Run workflow.
+Когда в `main` попадает `manifest.json` с новой версией, GitHub Actions соберёт плагин, создаст тег (без префикса `v`, как требует Obsidian) и опубликует релиз с `main.js`, `manifest.json` и `styles.css`. Если релиз этой версии уже есть, ничего не произойдёт. Запустить вручную можно на вкладке Actions → Release → Run workflow.
 
 Каждый push в `main` и каждый pull request проверяются сборкой.

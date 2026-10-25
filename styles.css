@@ -1,0 +1,30 @@
+.qoima-sync-status {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+}
+
+.qoima-sync-icon {
+	display: inline-flex;
+}
+
+.qoima-sync-icon .svg-icon {
+	width: var(--icon-xs);
+	height: var(--icon-xs);
+}
+
+.qoima-sync-spin svg {
+	animation: qoima-sync-spin 1s linear infinite;
+}
+
+@keyframes qoima-sync-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.qoima-sync-spin svg {
+		animation-duration: 3s;
+	}
+}

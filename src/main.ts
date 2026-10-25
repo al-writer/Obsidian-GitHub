@@ -1,4 +1,4 @@
-import { Notice, Plugin } from "obsidian";
+import { Notice, Plugin, setIcon } from "obsidian";
 import { GitHubClient, GitHubError } from "./github";
 import { LOCALES, resolveLanguage, Translate, translator } from "./i18n";
 import { DEFAULT_SETTINGS, QoimaSyncSettings, QoimaSyncSettingTab } from "./settings";
@@ -21,7 +21,7 @@ interface PluginData {
 
 type Status =
 	| { kind: "idle" }
-	| { kind: "syncing" }
+	| { kind: "syncing"; done: number; total: number; waiting: number | null }
 	| { kind: "synced"; at: Date; conflicts: number }
 	| { kind: "error"; message: string };
 
@@ -32,6 +32,10 @@ export default class QoimaSyncPlugin extends Plugin {
 	private store: SyncStore;
 	private status: Status = { kind: "idle" };
 	private statusBarEl: HTMLElement;
+	private statusIconEl: HTMLElement;
+	private statusTextEl: HTMLElement;
+	private ribbonEl: HTMLElement;
+	private progress: Notice | null = null;
 	private running: Promise<void> | null = null;
 	private intervalId: number | null = null;
 
@@ -46,10 +50,12 @@ export default class QoimaSyncPlugin extends Plugin {
 			callback: () => this.sync(),
 		});
 
-		this.addRibbonIcon("refresh-cw", this.t("ribbonSync"), () => this.sync());
+		this.ribbonEl = this.addRibbonIcon("refresh-cw", this.t("ribbonSync"), () => this.sync());
 
 		this.statusBarEl = this.addStatusBarItem();
-		this.statusBarEl.addClass("mod-clickable");
+		this.statusBarEl.addClass("mod-clickable", "qoima-sync-status");
+		this.statusIconEl = this.statusBarEl.createSpan({ cls: "qoima-sync-icon" });
+		this.statusTextEl = this.statusBarEl.createSpan();
 		this.registerDomEvent(this.statusBarEl, "click", () => this.sync());
 		this.renderStatus();
 
@@ -107,19 +113,25 @@ export default class QoimaSyncPlugin extends Plugin {
 	private async runSync(background: boolean) {
 		const { token, owner, repo, branch, deletionGuard } = this.settings;
 		const previous = this.status;
-		this.setStatus({ kind: "syncing" });
-		const progress = this.settings.showNotices && !background ? new Notice(this.t("noticeSyncing"), 0) : null;
+		this.progress = this.settings.showNotices && !background ? new Notice(this.t("noticeSyncing"), 0) : null;
+		this.setStatus({ kind: "syncing", done: 0, total: 0, waiting: null });
+		const update = (change: Partial<Extract<Status, { kind: "syncing" }>>) => {
+			if (this.status.kind === "syncing") this.setStatus({ ...this.status, ...change });
+		};
 
 		try {
 			const engine = new SyncEngine(
 				this.app,
-				new GitHubClient(token, owner, repo),
+				new GitHubClient(token, owner, repo, (wait) =>
+					update({ waiting: wait === null ? null : Date.now() + wait })
+				),
 				{
 					owner,
 					repo,
 					branch,
 					deletionGuard,
 					commitMessage: `Vault sync: ${this.app.vault.getName()}, ${new Date().toISOString()}`,
+					onProgress: (done, total) => update({ done, total }),
 				},
 				this.store
 			);
@@ -135,7 +147,8 @@ export default class QoimaSyncPlugin extends Plugin {
 				new Notice(this.t("noticeError", { message }), 10000);
 			}
 		} finally {
-			progress?.hide();
+			this.progress?.hide();
+			this.progress = null;
 		}
 	}
 
@@ -182,14 +195,24 @@ export default class QoimaSyncPlugin extends Plugin {
 	private renderStatus() {
 		const { status } = this;
 		let text: string;
+		let icon = "refresh-cw";
 		let tooltip = this.t("statusTooltip");
 		switch (status.kind) {
 			case "idle":
 				text = this.t("statusIdle");
 				break;
-			case "syncing":
-				text = this.t("statusSyncing");
+			case "syncing": {
+				const counter = status.total > 0 ? ` ${status.done}/${status.total}` : "";
+				const seconds = status.waiting === null ? 0 : Math.ceil((status.waiting - Date.now()) / 1000);
+				text = status.waiting === null ? this.t("statusSyncing") + counter : this.t("statusWaiting");
+				if (status.waiting !== null) icon = "clock";
+				this.progress?.setMessage(
+					status.waiting === null
+						? this.t("noticeSyncing") + counter
+						: this.t("noticeWaiting", { s: seconds })
+				);
 				break;
+			}
 			case "synced": {
 				const time = status.at.toLocaleTimeString(LOCALES[resolveLanguage(this.settings.language)], {
 					hour: "2-digit",
@@ -199,14 +222,20 @@ export default class QoimaSyncPlugin extends Plugin {
 					status.conflicts > 0
 						? this.t("statusConflicts", { n: status.conflicts })
 						: this.t("statusSynced", { time });
+				icon = status.conflicts > 0 ? "alert-triangle" : "check";
 				break;
 			}
 			case "error":
 				text = this.t("statusError");
 				tooltip = `${status.message}\n${tooltip}`;
+				icon = "alert-circle";
 				break;
 		}
-		this.statusBarEl.setText(text);
+		const spinning = status.kind === "syncing" && status.waiting === null;
+		setIcon(this.statusIconEl, icon);
+		this.statusIconEl.toggleClass("qoima-sync-spin", spinning);
+		this.ribbonEl.toggleClass("qoima-sync-spin", spinning);
+		this.statusTextEl.setText(text);
 		this.statusBarEl.setAttribute("aria-label", tooltip);
 		this.statusBarEl.setAttribute("data-tooltip-position", "top");
 	}

@@ -1,4 +1,4 @@
-import { arrayBufferToBase64, base64ToArrayBuffer, requestUrl } from "obsidian";
+import { arrayBufferToBase64, base64ToArrayBuffer, requestUrl, RequestUrlResponse } from "obsidian";
 
 export class GitHubError extends Error {
 	constructor(public status: number, message: string, public rateLimited = false) {
@@ -17,7 +17,32 @@ export interface NewTreeEntry {
 	path: string;
 	mode: string;
 	type: "blob";
-	sha: string | null;
+	/** An existing blob, or null to delete the path. */
+	sha?: string | null;
+	/** Inline UTF-8 content: GitHub creates the blob itself, which saves a request per file. */
+	content?: string;
+}
+
+const MAX_RETRIES = 4;
+/** Longer rate limit waits are reported as an error instead. */
+const MAX_WAIT = 5 * 60 * 1000;
+/** GitHub asks to leave at least a second between write requests. */
+const WRITE_INTERVAL = 1000;
+
+const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+/** How long to wait before retrying a rate-limited request, or null if it was not rate-limited. */
+function rateLimitWait(res: RequestUrlResponse, message: string, attempt: number): number | null {
+	if (res.status !== 403 && res.status !== 429) return null;
+	const retryAfter = Number(res.headers["retry-after"]);
+	if (retryAfter > 0) return retryAfter * 1000;
+	if (res.headers["x-ratelimit-remaining"] === "0") {
+		const reset = Number(res.headers["x-ratelimit-reset"]) * 1000;
+		return reset > 0 ? Math.max(reset - Date.now(), 0) + 1000 : MAX_WAIT + 1;
+	}
+	// The secondary limit often comes without hints: wait at least a minute, then back off.
+	if (/secondary rate limit/i.test(message)) return 60_000 * 2 ** attempt;
+	return null;
 }
 
 function encodePath(path: string): string {
@@ -26,13 +51,54 @@ function encodePath(path: string): string {
 
 export class GitHubClient {
 	private readonly base: string;
+	private writeQueue: Promise<unknown> = Promise.resolve();
+	private lastWrite = 0;
 
 	constructor(private token: string, owner: string, repo: string) {
 		this.base = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
 	}
 
-	private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-		const res = await requestUrl({
+	private request<T>(method: string, path: string, body?: unknown): Promise<T> {
+		if (method === "GET") return this.send<T>(method, path, body);
+		// Concurrent writes quickly trip GitHub's secondary rate limit, so they go one at a time.
+		const result = this.writeQueue.then(async () => {
+			await sleep(this.lastWrite + WRITE_INTERVAL - Date.now());
+			this.lastWrite = Date.now();
+			return this.send<T>(method, path, body);
+		});
+		this.writeQueue = result.catch(() => undefined);
+		return result;
+	}
+
+	private async send<T>(method: string, path: string, body?: unknown): Promise<T> {
+		for (let attempt = 0; ; attempt++) {
+			const res = await this.fetch(method, path, body);
+			if (res.status < 400) {
+				try {
+					return res.json as T;
+				} catch {
+					return undefined as T;
+				}
+			}
+
+			let message = `HTTP ${res.status}`;
+			try {
+				message = res.json?.message ?? message;
+			} catch {
+				// Not a JSON body.
+			}
+			const wait = rateLimitWait(res, message, attempt);
+			if (wait !== null && wait <= MAX_WAIT && attempt < MAX_RETRIES) {
+				console.warn(`Qoima Sync: GitHub rate limit, retrying in ${Math.round(wait / 1000)} s`);
+				await sleep(wait);
+				continue;
+			}
+			throw new GitHubError(res.status, message, wait !== null);
+		}
+	}
+
+	private fetch(method: string, path: string, body?: unknown): Promise<RequestUrlResponse> {
+		return requestUrl({
 			url: this.base + path,
 			method,
 			headers: {
@@ -44,24 +110,6 @@ export class GitHubClient {
 			body: body === undefined ? undefined : JSON.stringify(body),
 			throw: false,
 		});
-
-		if (res.status >= 400) {
-			let message = `HTTP ${res.status}`;
-			try {
-				message = res.json?.message ?? message;
-			} catch {
-				// Not a JSON body.
-			}
-			const rateLimited =
-				(res.status === 403 || res.status === 429) && res.headers["x-ratelimit-remaining"] === "0";
-			throw new GitHubError(res.status, message, rateLimited);
-		}
-
-		try {
-			return res.json as T;
-		} catch {
-			return undefined as T;
-		}
 	}
 
 	async getDefaultBranch(): Promise<string> {

@@ -15,6 +15,8 @@ export type HashCache = Record<string, { mtime: number; size: number; sha: strin
 export interface SyncStore {
 	state: SyncState | null;
 	cache: HashCache;
+	/** Blobs already uploaded by a sync that did not finish, so a retry does not upload them again. */
+	uploaded: string[];
 	save(): Promise<void>;
 }
 
@@ -57,6 +59,10 @@ const TEXT_EXTENSIONS = new Set([
 
 const MAX_ATTEMPTS = 3;
 const CONCURRENCY = 4;
+/** Text files up to this size are sent inline in the tree instead of as separate blobs. */
+const INLINE_LIMIT = 1024 * 1024;
+/** Approximate request size at which a large tree is split into several requests. */
+const TREE_CHUNK_SIZE = 4 * 1024 * 1024;
 
 /** Obsidian hides dotfiles and dot-folders (including .obsidian), so they are never synced. */
 function isSyncable(path: string): boolean {
@@ -71,7 +77,8 @@ function extension(path: string): string {
 
 function decodeText(data: ArrayBuffer): string | null {
 	try {
-		return new TextDecoder("utf-8", { fatal: true }).decode(data);
+		// Keep the BOM, so that encoding the text again gives the same bytes.
+		return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(data);
 	} catch {
 		return null;
 	}
@@ -119,6 +126,8 @@ export class SyncEngine {
 			try {
 				return await this.syncOnce();
 			} catch (e) {
+				// Remember the uploaded blobs and hashes for the next attempt.
+				await this.store.save();
 				// Someone pushed between our read and our write: start over with the new remote state.
 				if (e instanceof BranchMovedError && attempt < MAX_ATTEMPTS) continue;
 				throw e;
@@ -152,16 +161,26 @@ export class SyncEngine {
 		const finalRemote = new Map(remote);
 		const treeEntries: NewTreeEntry[] = [];
 		const taken = new Set([...local.keys(), ...remote.keys()]);
-		const entry = (path: string, sha: string | null): NewTreeEntry => ({
+		const entry = (path: string, blob: Pick<NewTreeEntry, "sha" | "content">): NewTreeEntry => ({
 			path,
 			mode: modes.get(path) ?? "100644",
 			type: "blob",
-			sha,
+			...blob,
 		});
 
 		const pushLocal = async (path: string, data: ArrayBuffer) => {
-			const sha = await this.client.createBlob(data);
-			treeEntries.push(entry(path, sha));
+			const sha = await gitBlobSha(data);
+			const text = data.byteLength <= INLINE_LIMIT ? decodeText(data) : null;
+			if (text !== null) {
+				// GitHub limits how fast content can be created, so text goes inline with the tree.
+				treeEntries.push(entry(path, { content: text }));
+			} else {
+				if (!this.store.uploaded.includes(sha)) {
+					await this.client.createBlob(data);
+					this.store.uploaded.push(sha);
+				}
+				treeEntries.push(entry(path, { sha }));
+			}
 			finalRemote.set(path, sha);
 			result.uploaded++;
 		};
@@ -185,7 +204,7 @@ export class SyncEngine {
 					break;
 				}
 				case "deleteRemote": {
-					treeEntries.push(entry(action.path, null));
+					treeEntries.push(entry(action.path, { sha: null }));
 					finalRemote.delete(action.path);
 					result.uploaded++;
 					break;
@@ -204,7 +223,7 @@ export class SyncEngine {
 						// so nothing is lost and the user resolves it by hand.
 						const copy = this.conflictPath(action.path, taken);
 						await this.writeLocal(copy, theirs, action.remote);
-						treeEntries.push(entry(copy, action.remote));
+						treeEntries.push(entry(copy, { sha: action.remote }));
 						finalRemote.set(copy, action.remote);
 						await pushLocal(action.path, ours);
 						result.conflicts.push(action.path);
@@ -216,7 +235,7 @@ export class SyncEngine {
 
 		let newHead = head;
 		if (treeEntries.length > 0) {
-			const newTree = await this.client.createTree(treeSha, treeEntries);
+			const newTree = await this.createTree(treeSha, treeEntries);
 			const commit = await this.client.createCommit(this.options.commitMessage, newTree, [head]);
 			try {
 				await this.client.updateBranch(this.options.branch, commit);
@@ -228,8 +247,27 @@ export class SyncEngine {
 		}
 
 		this.store.state = { key: this.key, commit: newHead, files: Object.fromEntries(finalRemote) };
+		this.store.uploaded = [];
 		await this.store.save();
 		return result;
+	}
+
+	/** Creates the tree in several requests when it carries a lot of inline content. */
+	private async createTree(baseTree: string, entries: NewTreeEntry[]): Promise<string> {
+		let tree = baseTree;
+		let chunk: NewTreeEntry[] = [];
+		let size = 0;
+		for (const e of entries) {
+			chunk.push(e);
+			size += e.path.length + (e.content?.length ?? 0);
+			if (size >= TREE_CHUNK_SIZE) {
+				tree = await this.client.createTree(tree, chunk);
+				chunk = [];
+				size = 0;
+			}
+		}
+		if (chunk.length > 0) tree = await this.client.createTree(tree, chunk);
+		return tree;
 	}
 
 	/** Returns the branch head, creating the branch if needed. Returns null when there is nothing to sync. */

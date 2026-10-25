@@ -28,7 +28,7 @@ Like git, every file is compared in three versions: local, on GitHub, and as of 
 | Text file changed on both sides in different places | Merged line by line automatically, like `git merge` |
 | Same lines changed, or a binary file | Conflict: the local version stays, the GitHub version is saved next to it as `note (conflict 2026-10-24 19-30-12).md` |
 
-All changes are pushed as a single commit. If someone pushes to the branch during a sync, the sync starts over with the new state.
+All changes are pushed as a single commit. GitHub limits how fast files can be created, so the first upload of a large vault with many images can take a while: when the limit is hit, the plugin waits and continues. If someone pushes to the branch during a sync, the sync starts over with the new state.
 
 Hidden files and folders (starting with `.`), including `.obsidian`, are not synced.
 

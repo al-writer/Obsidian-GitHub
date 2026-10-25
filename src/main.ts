@@ -16,6 +16,7 @@ interface PluginData {
 	settings?: Partial<QoimaSyncSettings>;
 	state?: SyncState | null;
 	cache?: HashCache;
+	uploaded?: string[];
 }
 
 type Status =
@@ -213,7 +214,12 @@ export default class QoimaSyncPlugin extends Plugin {
 	async loadSettings() {
 		const data: PluginData = (await this.loadData()) ?? {};
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings);
-		this.store = { state: data.state ?? null, cache: data.cache ?? {}, save: () => this.saveAll() };
+		this.store = {
+			state: data.state ?? null,
+			cache: data.cache ?? {},
+			uploaded: data.uploaded ?? [],
+			save: () => this.saveAll(),
+		};
 		this.t = translator(resolveLanguage(this.settings.language));
 	}
 
@@ -224,7 +230,8 @@ export default class QoimaSyncPlugin extends Plugin {
 	}
 
 	private async saveAll() {
-		const data: PluginData = { settings: this.settings, state: this.store.state, cache: this.store.cache };
+		const { state, cache, uploaded } = this.store;
+		const data: PluginData = { settings: this.settings, state, cache, uploaded };
 		await this.saveData(data);
 	}
 }

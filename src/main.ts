@@ -1,4 +1,5 @@
 import { Notice, Plugin, setIcon } from "obsidian";
+import { ErrorModal } from "./error-modal";
 import { GitHubClient, GitHubError } from "./github";
 import { LOCALES, resolveLanguage, Translate, translator } from "./i18n";
 import { DEFAULT_SETTINGS, QoimaSyncSettings, QoimaSyncSettingTab } from "./settings";
@@ -23,7 +24,13 @@ type Status =
 	| { kind: "idle" }
 	| { kind: "syncing"; done: number; total: number; waiting: number | null }
 	| { kind: "synced"; at: Date; conflicts: number }
-	| { kind: "error"; message: string };
+	| { kind: "error"; message: string; details: string };
+
+/**
+ * After GitHub's rate limit stops a sync, it resumes by itself after this delay.
+ * Uploaded files are remembered, so every run gets further.
+ */
+const RATE_LIMIT_RESUME = 15 * 60_000;
 
 export default class QoimaSyncPlugin extends Plugin {
 	settings: QoimaSyncSettings;
@@ -38,6 +45,7 @@ export default class QoimaSyncPlugin extends Plugin {
 	private progress: Notice | null = null;
 	private running: Promise<void> | null = null;
 	private intervalId: number | null = null;
+	private resumeId: number | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -56,8 +64,13 @@ export default class QoimaSyncPlugin extends Plugin {
 		this.statusBarEl.addClass("mod-clickable", "qoima-sync-status");
 		this.statusIconEl = this.statusBarEl.createSpan({ cls: "qoima-sync-icon" });
 		this.statusTextEl = this.statusBarEl.createSpan();
-		this.registerDomEvent(this.statusBarEl, "click", () => this.sync());
+		this.registerDomEvent(this.statusBarEl, "click", () => {
+			const { status } = this;
+			if (status.kind !== "error") return this.sync();
+			new ErrorModal(this.app, this.t, status.message, status.details, () => this.sync()).open();
+		});
 		this.renderStatus();
+		this.register(() => this.cancelResume());
 
 		// Wait until the vault is fully indexed before the startup sync.
 		this.app.workspace.onLayoutReady(() => {
@@ -110,8 +123,14 @@ export default class QoimaSyncPlugin extends Plugin {
 		}
 	}
 
+	private cancelResume() {
+		if (this.resumeId !== null) window.clearTimeout(this.resumeId);
+		this.resumeId = null;
+	}
+
 	private async runSync(background: boolean) {
 		const { token, owner, repo, branch, deletionGuard } = this.settings;
+		this.cancelResume();
 		const previous = this.status;
 		this.progress = this.settings.showNotices && !background ? new Notice(this.t("noticeSyncing"), 0) : null;
 		this.setStatus({ kind: "syncing", done: 0, total: 0, waiting: null });
@@ -140,8 +159,16 @@ export default class QoimaSyncPlugin extends Plugin {
 			this.notifyResult(result, background);
 		} catch (e) {
 			console.error("Qoima Sync failed", e);
-			const message = this.describeError(e);
-			this.setStatus({ kind: "error", message });
+			let message = this.describeError(e);
+			if (e instanceof GitHubError && e.rateLimited) {
+				const at = new Date(Date.now() + RATE_LIMIT_RESUME);
+				message += ". " + this.t("errResume", { time: this.formatTime(at) });
+				this.resumeId = window.setTimeout(() => {
+					this.resumeId = null;
+					this.sync(true);
+				}, RATE_LIMIT_RESUME);
+			}
+			this.setStatus({ kind: "error", message, details: this.errorDetails(e) });
 			// Do not repeat the same error on every periodic run.
 			if (!background || previous.kind !== "error" || previous.message !== message) {
 				new Notice(this.t("noticeError", { message }), 10000);
@@ -178,13 +205,30 @@ export default class QoimaSyncPlugin extends Plugin {
 			if (e.status === 401) return this.t("errAuth");
 			if (e.status === 403) return this.t("errForbidden");
 			if (e.status === 404) return this.t("errNotFound");
-			return e.message;
+			if (e.status >= 500) return this.t("errServer", { status: e.status, request: e.request });
+			return `${e.message} (HTTP ${e.status})`;
 		}
 		// requestUrl rejects without a status when the network is unavailable.
 		if (e instanceof Error && /net::|ENOTFOUND|ECONN|ETIMEDOUT|Failed to fetch/i.test(e.message)) {
 			return this.t("errNetwork");
 		}
-		return e instanceof Error ? e.message : String(e);
+		return (e instanceof Error ? e.message : String(e)) || this.t("errUnknown");
+	}
+
+	/** The raw error, shown in the error window to help tell what went wrong. */
+	private errorDetails(e: unknown): string {
+		const lines = [new Date().toLocaleString(LOCALES[resolveLanguage(this.settings.language)])];
+		if (e instanceof GitHubError) lines.push(`HTTP ${e.status} ${e.request}`.trim());
+		if (e instanceof Error) lines.push(`${e.name}: ${e.message}`);
+		else lines.push(String(e));
+		return lines.join("\n");
+	}
+
+	private formatTime(date: Date): string {
+		return date.toLocaleTimeString(LOCALES[resolveLanguage(this.settings.language)], {
+			hour: "2-digit",
+			minute: "2-digit",
+		});
 	}
 
 	private setStatus(status: Status) {
@@ -214,10 +258,7 @@ export default class QoimaSyncPlugin extends Plugin {
 				break;
 			}
 			case "synced": {
-				const time = status.at.toLocaleTimeString(LOCALES[resolveLanguage(this.settings.language)], {
-					hour: "2-digit",
-					minute: "2-digit",
-				});
+				const time = this.formatTime(status.at);
 				text =
 					status.conflicts > 0
 						? this.t("statusConflicts", { n: status.conflicts })
@@ -227,7 +268,7 @@ export default class QoimaSyncPlugin extends Plugin {
 			}
 			case "error":
 				text = this.t("statusError");
-				tooltip = `${status.message}\n${tooltip}`;
+				tooltip = `${status.message}\n${this.t("statusTooltipError")}`;
 				icon = "alert-circle";
 				break;
 		}

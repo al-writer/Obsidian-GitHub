@@ -12,7 +12,7 @@ Sync your Obsidian vault with a GitHub repository — automatically on startup, 
 
 - **Sync on startup**, **every N minutes** and **on quit** (desktop), each can be turned off.
 - **Manual sync**: the *Sync now* command, the ribbon button, or a click on the status bar.
-- **Status** in the status bar (`GitHub: synced at 14:05`, errors, conflicts) and in notifications. Background syncs stay quiet unless something changed.
+- **Status** in the status bar (`GitHub: synced at 14:05`, errors, conflicts) and in notifications. Click the status after an error to see the full error text and copy it. Background syncs stay quiet unless something changed.
 - **Branch selection** in the settings, with suggestions loaded from the repository. A missing branch is created from the default branch.
 - **Mass deletion protection**: the sync stops if it would delete more than half of the files.
 
@@ -28,7 +28,7 @@ Like git, every file is compared in three versions: local, on GitHub, and as of 
 | Text file changed on both sides in different places | Merged line by line automatically, like `git merge` |
 | Same lines changed, or a binary file | Conflict: the local version stays, the GitHub version is saved next to it as `note (conflict 2026-10-24 19-30-12).md` |
 
-All changes are pushed as a single commit. GitHub limits how fast files can be created, so the first upload of a large vault with many images can take a while: when the limit is hit, the plugin waits and continues. If someone pushes to the branch during a sync, the sync starts over with the new state.
+All changes are pushed as a single commit. GitHub limits how fast files can be created, so the first upload of a large vault with many images can take a while: when the limit is hit, the plugin waits and continues. If GitHub keeps refusing, the files sent so far are kept and the sync resumes by itself in 15 minutes, so every run gets further. If someone pushes to the branch during a sync, the sync starts over with the new state.
 
 Hidden files and folders (starting with `.`), including `.obsidian`, are not synced.
 

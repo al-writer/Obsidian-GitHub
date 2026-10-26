@@ -28,3 +28,13 @@
 		animation-duration: 3s;
 	}
 }
+
+.qoima-sync-error-details {
+	user-select: text;
+	white-space: pre-wrap;
+	word-break: break-word;
+	font-size: var(--font-ui-smaller);
+	padding: var(--size-4-2);
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+}

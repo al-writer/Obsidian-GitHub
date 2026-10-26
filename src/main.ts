@@ -1,8 +1,8 @@
 import { Notice, Plugin, setIcon } from "obsidian";
-import { ErrorModal } from "./error-modal";
 import { GitHubClient, GitHubError } from "./github";
 import { LOCALES, resolveLanguage, Translate, translator } from "./i18n";
 import { DEFAULT_SETTINGS, QoimaSyncSettings, QoimaSyncSettingTab } from "./settings";
+import { StatusModal } from "./status-modal";
 import {
 	HashCache,
 	MassDeletionError,
@@ -18,9 +18,15 @@ interface PluginData {
 	state?: SyncState | null;
 	cache?: HashCache;
 	uploaded?: string[];
+	lastSync?: LastSync;
 }
 
-type Status =
+/** Result of the last successful sync, kept across restarts for the status window. */
+export interface LastSync extends SyncResult {
+	at: number;
+}
+
+export type Status =
 	| { kind: "idle" }
 	| { kind: "syncing"; done: number; total: number; waiting: number | null }
 	| { kind: "synced"; at: Date; conflicts: number }
@@ -36,8 +42,11 @@ export default class QoimaSyncPlugin extends Plugin {
 	settings: QoimaSyncSettings;
 	t: Translate;
 
+	status: Status = { kind: "idle" };
+	lastSync: LastSync | null = null;
+	statusModal: StatusModal | null = null;
+
 	private store: SyncStore;
-	private status: Status = { kind: "idle" };
 	private statusBarEl: HTMLElement;
 	private statusIconEl: HTMLElement;
 	private statusTextEl: HTMLElement;
@@ -65,12 +74,13 @@ export default class QoimaSyncPlugin extends Plugin {
 		this.statusIconEl = this.statusBarEl.createSpan({ cls: "qoima-sync-icon" });
 		this.statusTextEl = this.statusBarEl.createSpan();
 		this.registerDomEvent(this.statusBarEl, "click", () => {
-			const { status } = this;
-			if (status.kind !== "error") return this.sync();
-			new ErrorModal(this.app, this.t, status.message, status.details, () => this.sync()).open();
+			this.statusModal?.close();
+			this.statusModal = new StatusModal(this);
+			this.statusModal.open();
 		});
 		this.renderStatus();
 		this.register(() => this.cancelResume());
+		this.register(() => this.statusModal?.close());
 
 		// Wait until the vault is fully indexed before the startup sync.
 		this.app.workspace.onLayoutReady(() => {
@@ -155,7 +165,9 @@ export default class QoimaSyncPlugin extends Plugin {
 				this.store
 			);
 			const result = await engine.sync();
+			this.lastSync = { ...result, at: Date.now() };
 			this.setStatus({ kind: "synced", at: new Date(), conflicts: result.conflicts.length });
+			await this.saveAll();
 			this.notifyResult(result, background);
 		} catch (e) {
 			console.error("Qoima Sync failed", e);
@@ -224,6 +236,13 @@ export default class QoimaSyncPlugin extends Plugin {
 		return lines.join("\n");
 	}
 
+	formatDateTime(date: Date): string {
+		return date.toLocaleString(LOCALES[resolveLanguage(this.settings.language)], {
+			dateStyle: "medium",
+			timeStyle: "short",
+		});
+	}
+
 	private formatTime(date: Date): string {
 		return date.toLocaleTimeString(LOCALES[resolveLanguage(this.settings.language)], {
 			hour: "2-digit",
@@ -236,42 +255,37 @@ export default class QoimaSyncPlugin extends Plugin {
 		this.renderStatus();
 	}
 
-	private renderStatus() {
+	/** Status bar text and icon, also used as the heading of the status window. */
+	statusLabel(): { text: string; icon: string } {
 		const { status } = this;
-		let text: string;
-		let icon = "refresh-cw";
-		let tooltip = this.t("statusTooltip");
 		switch (status.kind) {
 			case "idle":
-				text = this.t("statusIdle");
-				break;
+				return { text: this.t("statusIdle"), icon: "refresh-cw" };
 			case "syncing": {
+				if (status.waiting !== null) return { text: this.t("statusWaiting"), icon: "clock" };
 				const counter = status.total > 0 ? ` ${status.done}/${status.total}` : "";
-				const seconds = status.waiting === null ? 0 : Math.ceil((status.waiting - Date.now()) / 1000);
-				text = status.waiting === null ? this.t("statusSyncing") + counter : this.t("statusWaiting");
-				if (status.waiting !== null) icon = "clock";
-				this.progress?.setMessage(
-					status.waiting === null
-						? this.t("noticeSyncing") + counter
-						: this.t("noticeWaiting", { s: seconds })
-				);
-				break;
+				return { text: this.t("statusSyncing") + counter, icon: "refresh-cw" };
 			}
-			case "synced": {
-				const time = this.formatTime(status.at);
-				text =
-					status.conflicts > 0
-						? this.t("statusConflicts", { n: status.conflicts })
-						: this.t("statusSynced", { time });
-				icon = status.conflicts > 0 ? "alert-triangle" : "check";
-				break;
-			}
+			case "synced":
+				return status.conflicts > 0
+					? { text: this.t("statusConflicts", { n: status.conflicts }), icon: "alert-triangle" }
+					: { text: this.t("statusSynced", { time: this.formatTime(status.at) }), icon: "check" };
 			case "error":
-				text = this.t("statusError");
-				tooltip = `${status.message}\n${this.t("statusTooltipError")}`;
-				icon = "alert-circle";
-				break;
+				return { text: this.t("statusError"), icon: "alert-circle" };
 		}
+	}
+
+	private renderStatus() {
+		const { status } = this;
+		const { text, icon } = this.statusLabel();
+		if (status.kind === "syncing") {
+			const counter = status.total > 0 ? ` ${status.done}/${status.total}` : "";
+			const seconds = status.waiting === null ? 0 : Math.ceil((status.waiting - Date.now()) / 1000);
+			this.progress?.setMessage(
+				status.waiting === null ? this.t("noticeSyncing") + counter : this.t("noticeWaiting", { s: seconds })
+			);
+		}
+		const tooltip = status.kind === "error" ? `${status.message}\n${this.t("statusTooltip")}` : this.t("statusTooltip");
 		const spinning = status.kind === "syncing" && status.waiting === null;
 		setIcon(this.statusIconEl, icon);
 		this.statusIconEl.toggleClass("qoima-sync-spin", spinning);
@@ -279,6 +293,7 @@ export default class QoimaSyncPlugin extends Plugin {
 		this.statusTextEl.setText(text);
 		this.statusBarEl.setAttribute("aria-label", tooltip);
 		this.statusBarEl.setAttribute("data-tooltip-position", "top");
+		this.statusModal?.render();
 	}
 
 	async loadSettings() {
@@ -290,6 +305,7 @@ export default class QoimaSyncPlugin extends Plugin {
 			uploaded: data.uploaded ?? [],
 			save: () => this.saveAll(),
 		};
+		this.lastSync = data.lastSync ?? null;
 		this.t = translator(resolveLanguage(this.settings.language));
 	}
 
@@ -301,7 +317,7 @@ export default class QoimaSyncPlugin extends Plugin {
 
 	private async saveAll() {
 		const { state, cache, uploaded } = this.store;
-		const data: PluginData = { settings: this.settings, state, cache, uploaded };
+		const data: PluginData = { settings: this.settings, state, cache, uploaded, lastSync: this.lastSync ?? undefined };
 		await this.saveData(data);
 	}
 }

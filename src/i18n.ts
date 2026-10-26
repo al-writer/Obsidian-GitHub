@@ -19,8 +19,7 @@ const en = {
 	statusSynced: "GitHub: synced at {time}",
 	statusConflicts: "GitHub: conflicts ({n})",
 	statusError: "GitHub: sync error",
-	statusTooltip: "Click to sync",
-	statusTooltipError: "Click for details",
+	statusTooltip: "Click for details",
 
 	noticeSyncing: "Qoima Sync: syncing…",
 	noticeWaiting: "Qoima Sync: GitHub API limit reached, continuing in {s} s…",
@@ -42,13 +41,24 @@ const en = {
 	errServer: "GitHub server error (HTTP {status}, {request})",
 	errUnknown: "unknown error, see details in the developer console",
 
-	errorTitle: "Qoima Sync: sync error",
 	buttonCopy: "Copy",
 	buttonRetry: "Sync again",
 	errNetwork: "could not connect to GitHub",
 	errTruncated: "the repository is too large: GitHub returned an incomplete file list",
 	errMassDelete:
 		"sync stopped: {n} file(s) would be deleted. If this is intended, turn off deletion protection in the settings",
+
+	infoRepository: "Repository",
+	infoBranch: "Branch",
+	infoNotConfigured: "not set up: enter the token and repository in the plugin settings",
+	infoLastSync: "Last sync",
+	infoNever: "never",
+	infoChanges: "Changes",
+	infoChangesValue: "received {down}, sent {up}, merged {merged}",
+	infoAutoSync: "Automatic sync",
+	infoAutoSyncEvery: "every {n} min",
+	infoAutoSyncOff: "off",
+	infoConflicts: "Conflicts in the last sync (the remote versions are saved next to these files):",
 
 	settingLanguage: "Language",
 	settingLanguageAuto: "Same as Obsidian",
@@ -85,8 +95,7 @@ const ru: Strings = {
 	statusSynced: "GitHub: синхронизировано в {time}",
 	statusConflicts: "GitHub: конфликты ({n})",
 	statusError: "GitHub: ошибка синхронизации",
-	statusTooltip: "Нажмите, чтобы синхронизировать",
-	statusTooltipError: "Нажмите, чтобы посмотреть подробности",
+	statusTooltip: "Нажмите, чтобы посмотреть подробности",
 
 	noticeSyncing: "Qoima Sync: синхронизация…",
 	noticeWaiting: "Qoima Sync: достигнут лимит GitHub API, продолжу через {s} с…",
@@ -108,13 +117,24 @@ const ru: Strings = {
 	errServer: "ошибка сервера GitHub (HTTP {status}, {request})",
 	errUnknown: "неизвестная ошибка, подробности в консоли разработчика",
 
-	errorTitle: "Qoima Sync: ошибка синхронизации",
 	buttonCopy: "Скопировать",
 	buttonRetry: "Синхронизировать снова",
 	errNetwork: "не удалось подключиться к GitHub",
 	errTruncated: "репозиторий слишком большой: GitHub вернул неполный список файлов",
 	errMassDelete:
 		"синхронизация остановлена: было бы удалено файлов: {n}. Если это намеренно, отключите защиту от удаления в настройках",
+
+	infoRepository: "Репозиторий",
+	infoBranch: "Ветка",
+	infoNotConfigured: "не настроен: укажите токен и репозиторий в настройках плагина",
+	infoLastSync: "Последняя синхронизация",
+	infoNever: "ещё не было",
+	infoChanges: "Изменения",
+	infoChangesValue: "получено {down}, отправлено {up}, объединено {merged}",
+	infoAutoSync: "Автосинхронизация",
+	infoAutoSyncEvery: "каждые {n} мин",
+	infoAutoSyncOff: "отключена",
+	infoConflicts: "Конфликты при последней синхронизации (версии из GitHub сохранены рядом с этими файлами):",
 
 	settingLanguage: "Язык",
 	settingLanguageAuto: "Как в Obsidian",
@@ -149,8 +169,7 @@ const kk: Strings = {
 	statusSynced: "GitHub: {time} синхрондалды",
 	statusConflicts: "GitHub: қайшылықтар ({n})",
 	statusError: "GitHub: синхрондау қатесі",
-	statusTooltip: "Синхрондау үшін басыңыз",
-	statusTooltipError: "Толығырақ көру үшін басыңыз",
+	statusTooltip: "Толығырақ көру үшін басыңыз",
 
 	noticeSyncing: "Qoima Sync: синхрондалуда…",
 	noticeWaiting: "Qoima Sync: GitHub API шегіне жетті, {s} с кейін жалғастырамын…",
@@ -172,13 +191,24 @@ const kk: Strings = {
 	errServer: "GitHub серверінің қатесі (HTTP {status}, {request})",
 	errUnknown: "белгісіз қате, толығырақ әзірлеуші консолінде",
 
-	errorTitle: "Qoima Sync: синхрондау қатесі",
 	buttonCopy: "Көшіру",
 	buttonRetry: "Қайта синхрондау",
 	errNetwork: "GitHub-қа қосылу мүмкін болмады",
 	errTruncated: "репозиторий тым үлкен: GitHub файлдардың толық емес тізімін қайтарды",
 	errMassDelete:
 		"синхрондау тоқтатылды: жойылатын файлдар саны: {n}. Егер бұл әдейі болса, баптауларда жоюдан қорғауды өшіріңіз",
+
+	infoRepository: "Репозиторий",
+	infoBranch: "Тармақ",
+	infoNotConfigured: "бапталмаған: плагин баптауларында токен мен репозиторийді көрсетіңіз",
+	infoLastSync: "Соңғы синхрондау",
+	infoNever: "әлі болған жоқ",
+	infoChanges: "Өзгерістер",
+	infoChangesValue: "алынды {down}, жіберілді {up}, біріктірілді {merged}",
+	infoAutoSync: "Автоматты синхрондау",
+	infoAutoSyncEvery: "әр {n} минут сайын",
+	infoAutoSyncOff: "өшірулі",
+	infoConflicts: "Соңғы синхрондаудағы қайшылықтар (GitHub-тағы нұсқалар осы файлдардың қасында сақталды):",
 
 	settingLanguage: "Тіл",
 	settingLanguageAuto: "Obsidian тіліндей",

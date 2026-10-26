@@ -11,8 +11,8 @@ Sync your Obsidian vault with a GitHub repository — automatically on startup, 
 ## Features
 
 - **Sync on startup**, **every N minutes** and **on quit** (desktop), each can be turned off.
-- **Manual sync**: the *Sync now* command, the ribbon button, or a click on the status bar.
-- **Status** in the status bar (`GitHub: synced at 14:05`, errors, conflicts) and in notifications. Click the status after an error to see the full error text and copy it. Background syncs stay quiet unless something changed.
+- **Manual sync**: the *Sync now* command, the ribbon button, or the button in the status window.
+- **Status** in the status bar (`GitHub: synced at 14:05`, errors, conflicts) and in notifications. Click the status to open a window with the details: repository and branch, progress, time and changes of the last sync, files with conflicts, the full error text with a copy button, and a sync button. Background syncs stay quiet unless something changed.
 - **Branch selection** in the settings, with suggestions loaded from the repository. A missing branch is created from the default branch.
 - **Mass deletion protection**: the sync stops if it would delete more than half of the files.
 

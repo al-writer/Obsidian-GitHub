@@ -38,3 +38,39 @@
 	border-radius: var(--radius-s);
 	background: var(--background-secondary);
 }
+
+.qoima-sync-modal-status {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	font-weight: var(--font-semibold);
+	margin-bottom: var(--size-4-3);
+}
+
+.qoima-sync-progress {
+	width: 100%;
+	margin-bottom: var(--size-4-3);
+}
+
+.qoima-sync-info {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: var(--size-4-1) var(--size-4-4);
+	margin: var(--size-4-3) 0;
+}
+
+.qoima-sync-info-name {
+	color: var(--text-muted);
+}
+
+.qoima-sync-info-value {
+	user-select: text;
+	word-break: break-word;
+}
+
+.qoima-sync-conflicts {
+	max-height: 12em;
+	overflow-y: auto;
+	margin-top: 0;
+	word-break: break-word;
+}

@@ -1,7 +1,7 @@
 {
 	"id": "qoima-sync",
 	"name": "Qoima Sync",
-	"version": "0.2.2",
+	"version": "0.2.3",
 	"minAppVersion": "1.8.7",
 	"description": "Sync your vault with a GitHub repository on startup, on a schedule and on quit, merging concurrent edits automatically.",
 	"author": "al-writer",

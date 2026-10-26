@@ -63,8 +63,12 @@ const MAX_ATTEMPTS = 3;
 const CONCURRENCY = 4;
 /** Text files up to this size are sent inline in the tree instead of as separate blobs. */
 const INLINE_LIMIT = 1024 * 1024;
-/** Approximate request size at which a large tree is split into several requests. */
-const TREE_CHUNK_SIZE = 4 * 1024 * 1024;
+/**
+ * Limits of a single tree request. GitHub answers a large tree with a server error
+ * instead of creating it, so the tree is sent in parts.
+ */
+const TREE_CHUNK_SIZE = 1024 * 1024;
+const TREE_CHUNK_ENTRIES = 500;
 
 /** Obsidian hides dotfiles and dot-folders (including .obsidian), so they are never synced. */
 function isSyncable(path: string): boolean {
@@ -95,14 +99,23 @@ async function gitBlobSha(data: ArrayBuffer): Promise<string> {
 	return Array.from(digest, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** Runs `fn` on the items in parallel. After the first error no new items start, and the error is thrown once the rest settle. */
 async function runPool<T>(items: T[], fn: (item: T) => Promise<void>): Promise<void> {
 	let next = 0;
+	let failed = false;
 	const workers = Array.from({ length: Math.min(CONCURRENCY, items.length) }, async () => {
-		while (next < items.length) {
-			await fn(items[next++]);
+		while (!failed && next < items.length) {
+			try {
+				await fn(items[next++]);
+			} catch (e) {
+				failed = true;
+				throw e;
+			}
 		}
 	});
-	await Promise.all(workers);
+	const results = await Promise.allSettled(workers);
+	const error = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+	if (error) throw error.reason;
 }
 
 function timestamp(): string {
@@ -265,14 +278,26 @@ export class SyncEngine {
 		for (const e of entries) {
 			chunk.push(e);
 			size += e.path.length + (e.content?.length ?? 0);
-			if (size >= TREE_CHUNK_SIZE) {
-				tree = await this.client.createTree(tree, chunk);
+			if (size >= TREE_CHUNK_SIZE || chunk.length >= TREE_CHUNK_ENTRIES) {
+				tree = await this.createTreeChunk(tree, chunk);
 				chunk = [];
 				size = 0;
 			}
 		}
-		if (chunk.length > 0) tree = await this.client.createTree(tree, chunk);
+		if (chunk.length > 0) tree = await this.createTreeChunk(tree, chunk);
 		return tree;
+	}
+
+	/** A part GitHub still fails to create with a server error is split in half. */
+	private async createTreeChunk(baseTree: string, entries: NewTreeEntry[]): Promise<string> {
+		try {
+			return await this.client.createTree(baseTree, entries);
+		} catch (e) {
+			if (!(e instanceof GitHubError && e.status >= 500) || entries.length < 2) throw e;
+			const half = Math.ceil(entries.length / 2);
+			const tree = await this.createTreeChunk(baseTree, entries.slice(0, half));
+			return this.createTreeChunk(tree, entries.slice(half));
+		}
 	}
 
 	/** Returns the branch head, creating the branch if needed. Returns null when there is nothing to sync. */

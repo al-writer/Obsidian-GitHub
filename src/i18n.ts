@@ -20,6 +20,7 @@ const en = {
 	statusConflicts: "GitHub: conflicts ({n})",
 	statusError: "GitHub: sync error",
 	statusTooltip: "Click to sync",
+	statusTooltipError: "Click for details",
 
 	noticeSyncing: "Qoima Sync: syncing…",
 	noticeWaiting: "Qoima Sync: GitHub API limit reached, continuing in {s} s…",
@@ -31,11 +32,19 @@ const en = {
 	noticeNotConfigured: "Qoima Sync: set the token and repository in the plugin settings",
 	noticeError: "Qoima Sync error: {message}",
 	noticeBranchesLoaded: "Branches loaded: {n}",
+	noticeCopied: "Copied",
 
 	errAuth: "the token is invalid or expired",
 	errForbidden: "access denied: check the token permissions (Contents: Read and write)",
 	errNotFound: "repository not found or the token has no access to it",
-	errRateLimit: "GitHub API rate limit exceeded, try again later",
+	errRateLimit: "GitHub temporarily limited requests: too many files are being uploaded",
+	errResume: "Files already sent are saved, the sync will continue automatically at {time}",
+	errServer: "GitHub server error (HTTP {status}, {request})",
+	errUnknown: "unknown error, see details in the developer console",
+
+	errorTitle: "Qoima Sync: sync error",
+	buttonCopy: "Copy",
+	buttonRetry: "Sync again",
 	errNetwork: "could not connect to GitHub",
 	errTruncated: "the repository is too large: GitHub returned an incomplete file list",
 	errMassDelete:
@@ -77,6 +86,7 @@ const ru: Strings = {
 	statusConflicts: "GitHub: конфликты ({n})",
 	statusError: "GitHub: ошибка синхронизации",
 	statusTooltip: "Нажмите, чтобы синхронизировать",
+	statusTooltipError: "Нажмите, чтобы посмотреть подробности",
 
 	noticeSyncing: "Qoima Sync: синхронизация…",
 	noticeWaiting: "Qoima Sync: достигнут лимит GitHub API, продолжу через {s} с…",
@@ -88,11 +98,19 @@ const ru: Strings = {
 	noticeNotConfigured: "Qoima Sync: укажите токен и репозиторий в настройках плагина",
 	noticeError: "Ошибка Qoima Sync: {message}",
 	noticeBranchesLoaded: "Загружено веток: {n}",
+	noticeCopied: "Скопировано",
 
 	errAuth: "токен недействителен или истёк",
 	errForbidden: "доступ запрещён: проверьте права токена (Contents: Read and write)",
 	errNotFound: "репозиторий не найден или у токена нет к нему доступа",
-	errRateLimit: "превышен лимит запросов к GitHub API, повторите позже",
+	errRateLimit: "GitHub временно ограничил запросы: отправляется слишком много файлов",
+	errResume: "Уже отправленные файлы сохранены, синхронизация продолжится автоматически в {time}",
+	errServer: "ошибка сервера GitHub (HTTP {status}, {request})",
+	errUnknown: "неизвестная ошибка, подробности в консоли разработчика",
+
+	errorTitle: "Qoima Sync: ошибка синхронизации",
+	buttonCopy: "Скопировать",
+	buttonRetry: "Синхронизировать снова",
 	errNetwork: "не удалось подключиться к GitHub",
 	errTruncated: "репозиторий слишком большой: GitHub вернул неполный список файлов",
 	errMassDelete:
@@ -132,6 +150,7 @@ const kk: Strings = {
 	statusConflicts: "GitHub: қайшылықтар ({n})",
 	statusError: "GitHub: синхрондау қатесі",
 	statusTooltip: "Синхрондау үшін басыңыз",
+	statusTooltipError: "Толығырақ көру үшін басыңыз",
 
 	noticeSyncing: "Qoima Sync: синхрондалуда…",
 	noticeWaiting: "Qoima Sync: GitHub API шегіне жетті, {s} с кейін жалғастырамын…",
@@ -143,11 +162,19 @@ const kk: Strings = {
 	noticeNotConfigured: "Qoima Sync: плагин баптауларында токен мен репозиторийді көрсетіңіз",
 	noticeError: "Qoima Sync қатесі: {message}",
 	noticeBranchesLoaded: "Жүктелген тармақтар: {n}",
+	noticeCopied: "Көшірілді",
 
 	errAuth: "токен жарамсыз немесе мерзімі өткен",
 	errForbidden: "қол жеткізуге тыйым салынған: токен құқықтарын тексеріңіз (Contents: Read and write)",
 	errNotFound: "репозиторий табылмады немесе токеннің оған қол жеткізуі жоқ",
-	errRateLimit: "GitHub API сұраныстар шегінен асып кетті, кейінірек қайталаңыз",
+	errRateLimit: "GitHub сұраныстарды уақытша шектеді: тым көп файл жіберілуде",
+	errResume: "Жіберілген файлдар сақталды, синхрондау {time} кезінде автоматты түрде жалғасады",
+	errServer: "GitHub серверінің қатесі (HTTP {status}, {request})",
+	errUnknown: "белгісіз қате, толығырақ әзірлеуші консолінде",
+
+	errorTitle: "Qoima Sync: синхрондау қатесі",
+	buttonCopy: "Көшіру",
+	buttonRetry: "Қайта синхрондау",
 	errNetwork: "GitHub-қа қосылу мүмкін болмады",
 	errTruncated: "репозиторий тым үлкен: GitHub файлдардың толық емес тізімін қайтарды",
 	errMassDelete:

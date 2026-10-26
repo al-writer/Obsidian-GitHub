@@ -1,7 +1,13 @@
 import { arrayBufferToBase64, base64ToArrayBuffer, requestUrl, RequestUrlResponse } from "obsidian";
 
 export class GitHubError extends Error {
-	constructor(public status: number, message: string, public rateLimited = false) {
+	/** `request` is the failed call, such as "POST /git/trees", to tell where the sync stopped. */
+	constructor(
+		public status: number,
+		message: string,
+		public rateLimited = false,
+		public request = ""
+	) {
 		super(message);
 	}
 }
@@ -24,6 +30,8 @@ export interface NewTreeEntry {
 }
 
 const MAX_RETRIES = 4;
+/** GitHub server errors are often transient, but a request that keeps failing is reported. */
+const SERVER_RETRIES = 2;
 /** Longer rate limit waits are reported as an error instead. */
 const MAX_WAIT = 5 * 60 * 1000;
 /** GitHub asks to leave at least a second between write requests. */
@@ -101,7 +109,12 @@ export class GitHubClient {
 				this.onRateLimit?.(null);
 				continue;
 			}
-			throw new GitHubError(res.status, message, wait !== null);
+			if (res.status >= 500 && attempt < SERVER_RETRIES) {
+				console.warn(`Qoima Sync: GitHub server error ${res.status} on ${method} ${path}, retrying`);
+				await sleep(5000 * 2 ** attempt);
+				continue;
+			}
+			throw new GitHubError(res.status, message, wait !== null, `${method} ${path.replace(/\?.*/, "")}`);
 		}
 	}
 
